@@ -38,11 +38,11 @@ sub load_ResourcePayments {
 	my $sth_select = $dbh_res->prepare( q{ SELECT resourceID FROM Resource WHERE titleText = ? });
 	my $sth_insert = $dbh_res->prepare( q{ INSERT INTO ResourcePayment (resourceID, fundName, selectorLoginID, paymentAmount, orderTypeID, currencyCode) VALUES (?, ?, ?, ?, ?, ?) });
 	for my $aref (@{$payments_ref}) {
-		my ($titleText, $amount, $orderTypeID, $fundName) = @{$aref};
+		my ($titleText, $amount, $orderTypeID, $fundName, $selectorLoginID, $currencyCode) = @{$aref};
 		$sth_select->execute($titleText);
 		my $resourceID = $sth_select->fetchrow_array;
 		if ($resourceID) {
-			$sth_insert->execute($resourceID, $fundName, "systemLoader", $amount, $orderTypeID, "USD"); #TODO: replace fixed vars with dynamic.
+			$sth_insert->execute($resourceID, $fundName, $selectorLoginID, $amount, $orderTypeID, $currencyCode);
 			$dbh_res->commit;
 		}
 	}
@@ -431,9 +431,11 @@ sub main {
 		if (length($fund_str) > 200) { $fund_str = substr($fund_str, 0, 199); }
 		my $acquisitionType = find_term($acquisitionType_str, \%acquisitionType);
 		my $orderTypeID = find_term($orderType_str, \%orderType);
-		if ($resourcePayment_str) { 
+		my $currencyCode = $currency_str;
+		$currencyCode ||= 'USD';
+		if ($resourcePayment_str) {
 			$resourcePayment_str =~ s/[^\d]//g;
-			push @payments, [ $titleText, $resourcePayment_str, $orderTypeID, $fund_str ]; 
+			push @payments, [ $titleText, $resourcePayment_str, $orderTypeID, $fund_str, $createLoginID, $currencyCode ];
 		}
 		if (length($orderNumber) > 45) { $orderNumber = substr($orderNumber, 0, 44); }
 		if (length($systemNumber) > 45) { $systemNumber = substr($systemNumber, 0, 44); }
