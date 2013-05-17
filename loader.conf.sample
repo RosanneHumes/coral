@@ -1,0 +1,10 @@
+[strings]
+createDate = 2013-04-25
+createLoginID = systemLoader
+
+[database]
+user = username
+pass = password
+resources_db = coral_resources_prod
+orgs_db = coral_organizations_prod
+lic_db = coral_licensing_prod
