@@ -28,7 +28,7 @@ sub load_Organizations {
 		$sth_select->execute($titleText);
 		my $resourceID = $sth_select->fetchrow_array;
 		if ($resourceID) {
-			$sth_insert->execute($resourceID, $orgID, 4); #TODO: find out why this is hard-coded.
+			$sth_insert->execute($resourceID, $orgID, 4); #TODO: '4' = 'Provider' in OrganizationRole table.
 			$dbh_res->commit;
 		}
 	}
