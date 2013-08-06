@@ -1,0 +1,10 @@
+CORAL LOADER
+
+This project contains a program to load data from a spreadsheet into a typical
+Coral MySQL database. It can be used to do an inital or subsequent loads. The
+main flow of the program is to first set up necessary lookup tables and then parse
+the data input from the tab separated input file. The best way to start is to
+do an export from Coral to determine the fields that can be used to import the data.
+
+Certain assumptions based on local use have been marked as `TODO' in the program. Local
+variables can be provided in a configuration file.
