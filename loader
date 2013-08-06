@@ -1,10 +1,16 @@
 #!/usr/bin/perl
+#
+# loader
+#
+# Reads the cofiguration in loader.conf and then reads STDIN or the file given with the command.
+# Parses out all the data fields and then loads the data as required by the Coral application.
+#
 use warnings;
 use strict;
 use DBI;
 use Config::Tiny;
 
-# All the sub-routines.
+# The following load_*() subroutines take the data and load it into the appropriate tables.
 sub load_PurchaseSites {
 	my ($purchase_sites_ref, $dbh_res) = @_;
 	my $sth_select = $dbh_res->prepare( q{ SELECT resourceID FROM Resource WHERE titleText = ? });
@@ -19,6 +25,7 @@ sub load_PurchaseSites {
 		}
 	}
 }
+
 sub load_Organizations {
 	my ($orgs_ref, $dbh_res) = @_;
 	my $sth_select = $dbh_res->prepare( q{ SELECT resourceID FROM Resource WHERE titleText = ? });
@@ -33,6 +40,7 @@ sub load_Organizations {
 		}
 	}
 }
+
 sub load_ResourcePayments {
 	my ($payments_ref, $dbh_res) = @_;
 	my $sth_select = $dbh_res->prepare( q{ SELECT resourceID FROM Resource WHERE titleText = ? });
@@ -47,6 +55,7 @@ sub load_ResourcePayments {
 		}
 	}
 }
+
 sub load_Parents {
 	my ($parents_ref, $dbh_res) = @_;
 	my $sth_select = $dbh_res->prepare( q{ SELECT resourceID FROM Resource WHERE titleText = ? });
@@ -63,6 +72,7 @@ sub load_Parents {
 		}
 	}
 }
+
 sub load_Children {
 	my ($children_ref, $dbh_res) = @_;
 	my $sth_select = $dbh_res->prepare( q{ SELECT resourceID FROM Resource WHERE titleText = ? });
@@ -79,6 +89,7 @@ sub load_Children {
 		}
 	}
 }
+
 sub load_Aliases {
 	my ($aliases_ref, $dbh_res) = @_;
 	my $sth_select = $dbh_res->prepare( q{ SELECT resourceID FROM Resource WHERE titleText = ? });
@@ -94,6 +105,7 @@ sub load_Aliases {
 		}
 	}
 }
+
 sub insert_AuthorizedSite {
 	my ($AuthorizedSite, $dbh_res) = @_;
 	my $sth_insert = $dbh_res->prepare( q{ INSERT INTO AuthorizedSite (shortName) VALUES (?) });
@@ -107,6 +119,7 @@ sub insert_AuthorizedSite {
 		return $authorizedSiteID;
 	}
 }
+
 sub load_ResourceAuthorizedSiteLink {
 	my ($authorized_sites_ref, $dbh_res) = @_;
 	my $sth_select = $dbh_res->prepare( q{ SELECT resourceID FROM Resource WHERE titleText = ? });
@@ -121,6 +134,7 @@ sub load_ResourceAuthorizedSiteLink {
 		}
 	}
 }
+
 sub insert_AdministeringSite {
 	my ($AdministeringSite, $dbh_res) = @_;
 	my $sth_insert = $dbh_res->prepare( q{ INSERT INTO AdministeringSite (shortName) VALUES (?) });
@@ -134,6 +148,7 @@ sub insert_AdministeringSite {
 		return $administeringSiteID;
 	}
 }
+
 sub load_ResourceAdministeringSiteLink {
 	my ($administering_sites_ref, $dbh_res) = @_;
 	my $sth_select = $dbh_res->prepare( q{ SELECT resourceID FROM Resource WHERE titleText = ? });
@@ -148,6 +163,7 @@ sub load_ResourceAdministeringSiteLink {
 		}
 	}
 }
+
 sub load_ResourceLicenseLink {
 	my ($license_links_ref, $dbh_res) = @_;
 	my $sth_select = $dbh_res->prepare( q{ SELECT resourceID FROM Resource WHERE titleText = ? });
@@ -162,6 +178,7 @@ sub load_ResourceLicenseLink {
 		}
 	}
 }
+
 sub load_ResourceLicenseStatus {
 	my ($license_statuses_ref, $dbh_res) = @_;
 	my $sth_select = $dbh_res->prepare( q{ SELECT resourceID FROM Resource WHERE titleText = ? });
@@ -176,6 +193,7 @@ sub load_ResourceLicenseStatus {
 		}
 	}
 }
+
 sub find_term {
 	my $term = shift;
 	my $hash_ref = shift;
@@ -189,7 +207,9 @@ sub find_term {
 	}
 	return (undef);
 }
+
 sub fix_date {
+	# Utility function to fix-up date formats to work with MySQL.
 	my $date = shift;
 	my ($month, $day, $year) = split(/\//, $date);
 	if ( $year && $month && $day ) {
@@ -199,8 +219,8 @@ sub fix_date {
 		return (undef);
 	}
 }
+
 sub main {
-	
 	# Set up the necessary data structures and database connections.
 
 	# The following are logically dependent on resourceID existing first, so they are loaded afterward.
@@ -231,7 +251,7 @@ sub main {
 	my $dbh_orgs = DBI->connect("dbi:mysql:database=$orgs_db", $user, $pass, {RaiseError => 1, AutoCommit => 0}) or die "Can't connect to $orgs_db: $DBI::errstr";
 	my $dbh_lic = DBI->connect("dbi:mysql:database=$lic_db", $user, $pass, {RaiseError => 1, AutoCommit => 0}) or die "Can't connect to $lic_db: $DBI::errstr";
 	
-	# Build the hash lookup structures from database queries.
+	# Build the hash lookup structures from database queries. Easier than having to constantly query the database.
 	my %resourceType;
 	my $sth = $dbh_res->prepare("SELECT resourceTypeID, shortName FROM ResourceType");
 	$sth->execute();
@@ -261,7 +281,7 @@ sub main {
 		$organization{$organizationID} = "$name";
 	}
 
-	$dbh_orgs->disconnect; # Terminate this connection.
+	$dbh_orgs->disconnect; # Terminate this connection as it is no longer needed.
 
 	my %license;
 	$sth = $dbh_lic->prepare("SELECT licenseID, shortName FROM License");
@@ -277,7 +297,7 @@ sub main {
 		$license_status{$statusID} = "$shortname";
 	}
 	
-	$dbh_lic->disconnect; # Terminate this connection.
+	$dbh_lic->disconnect; # Terminate this connection as it is no longer needed.
 
 	my %acquisitionType;
 	$sth = $dbh_res->prepare("SELECT acquisitionTypeID, shortName FROM AcquisitionType");
@@ -353,9 +373,7 @@ sub main {
 	my $sth_1 = $dbh_res->prepare( q{ INSERT INTO Resource (resourceID, createDate, createLoginID, updateDate, updateLoginID, archiveDate, archiveLoginID, workflowRestartDate, workflowRestartLoginID, titleText, isbnOrISSN, descriptionText, statusID, resourceTypeID, resourceFormatID, orderNumber, systemNumber, subscriptionStartDate, subscriptionEndDate, subscriptionAlertEnabledInd, userLimitID, resourceURL, authenticationUserName, authenticationPassword, storageLocationID, registeredIPAddresses, acquisitionTypeID, authenticationTypeID, accessMethodID, providerText, recordSetIdentifier, hasOclcHoldings, numberRecordsAvailable, numberRecordsLoaded, bibSourceURL, catalogingTypeID, catalogingStatusID, coverageText, resourceAltURL) 
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) });
 	
-	# Read and process the data input file.
-	open FH, "<coral.csv" or die "Unable to open coral.csv: $!";
-	while (<FH>) {
+	while (<>) { # Enter the file on the command line or take STDIN.
 		chomp;
 		my (
 			$resourceID,
@@ -407,76 +425,172 @@ sub main {
 	
 		# Perform sanity checks on input data.
 		$resourceID = undef; # Must be undefined by definition.
-		#next unless $titleText; # Stop here if this isn't defined.
-		if (length($titleText) > 200) { $titleText = substr($titleText, 0, 199); }
+
+		if (length($titleText) > 200) { 
+			$titleText = substr($titleText, 0, 199); 
+		}
+
 		my $resourceType = find_term($resourceType_str, \%resourceType);
 		my $resourceFormatID = find_term($resourceFormatID_str, \%resourceFormat);
-		if ($createLoginID_str) { $createLoginID = $createLoginID_str; }
-		if ($createDate_str) { $createDate = fix_date($createDate_str); }
-		if ($updateDate) { $updateDate = fix_date($updateDate); }
-		if (length($updateLoginID) > 45) { $updateLoginID = substr($updateLoginID, 0, 44); }
+
+		if ($createLoginID_str) { 
+			$createLoginID = $createLoginID_str; 
+		}
+
+		if ($createDate_str) { 
+			$createDate = fix_date($createDate_str); 
+		}
+
+		if ($updateDate) { 
+			$updateDate = fix_date($updateDate); 
+		}
+
+		if (length($updateLoginID) > 45) { 
+			$updateLoginID = substr($updateLoginID, 0, 44); 
+		}
+
 		my $statusID = find_term($statusID_str, \%status);
 		if (! $statusID) {
 			$statusID = 1;
 		}
-		if (length($isbnOrISSN) > 45) { $isbnOrISSN = substr($isbnOrISSN, 0, 44); }
-		if (length($resourceURL) > 2000) { $resourceURL = substr($resourceURL, 0, 1999); }
-		if (length($resourceAltURL) > 2000) { $resourceAltURL = substr($resourceAltURL, 0, 1999); }
+
+		if (length($isbnOrISSN) > 45) { 
+			$isbnOrISSN = substr($isbnOrISSN, 0, 44); 
+		}
+
+		if (length($resourceURL) > 2000) { 
+			$resourceURL = substr($resourceURL, 0, 1999); 
+		}
+
+		if (length($resourceAltURL) > 2000) { 
+			$resourceAltURL = substr($resourceAltURL, 0, 1999); 
+		}
+
 		$organization_str = lc($organization_str);
 		my $organization = find_term($organization_str, \%organization);
-		if ($organization) { push @orgs, [ $titleText, $organization ]; }
-		if ($alias_str) { push @aliases, [ $titleText, $alias_str ]; }
-		if ($parent_str) { push @parents, [ $titleText, $parent_str ]; }
-		if ($child_str) { push @children, [ $titleText, $child_str ]; }
-		if (length($fund_str) > 200) { $fund_str = substr($fund_str, 0, 199); }
+		if ($organization) { 
+			push @orgs, [ $titleText, $organization ]; 
+		}
+
+		if ($alias_str) { 
+			push @aliases, [ $titleText, $alias_str ]; 
+		}
+
+		if ($parent_str) { 
+			push @parents, [ $titleText, $parent_str ]; 
+		}
+		
+		if ($child_str) { 
+			push @children, [ $titleText, $child_str ]; 
+		}
+
+		if (length($fund_str) > 200) { 
+			$fund_str = substr($fund_str, 0, 199); 
+		}
+
 		my $acquisitionType = find_term($acquisitionType_str, \%acquisitionType);
+
 		my $orderTypeID = find_term($orderType_str, \%orderType);
+
 		my $currencyCode = $currency_str;
 		$currencyCode ||= 'USD';
+
 		if ($resourcePayment_str) {
 			$resourcePayment_str =~ s/[^\d]//g;
 			push @payments, [ $titleText, $resourcePayment_str, $orderTypeID, $fund_str, $createLoginID, $currencyCode ];
 		}
-		if (length($orderNumber) > 45) { $orderNumber = substr($orderNumber, 0, 44); }
-		if (length($systemNumber) > 45) { $systemNumber = substr($systemNumber, 0, 44); }
+
+		if (length($orderNumber) > 45) { 
+			$orderNumber = substr($orderNumber, 0, 44); 
+		}
+
+		if (length($systemNumber) > 45) { 
+			$systemNumber = substr($systemNumber, 0, 44); 
+		}
+
 		if ($purchaseSite_str) { 
 			my $purchaseSiteID = find_term($purchaseSite_str, \%purchaseSite); 
 			push @purchase_sites, [ $titleText, $purchaseSiteID ];
 		}
-		if ($subscriptionStartDate) { $subscriptionStartDate = fix_date($subscriptionStartDate); }
-		if ($subscriptionEndDate) { $subscriptionEndDate = fix_date($subscriptionEndDate); }
+
+		if ($subscriptionStartDate) { 
+			$subscriptionStartDate = fix_date($subscriptionStartDate); 
+		}
+
+		if ($subscriptionEndDate) { 
+			$subscriptionEndDate = fix_date($subscriptionEndDate); 
+		}
+
 		my $subscriptionAlertEnabledInd = undef;
-		if ($subscriptionAlertEnabledInd_str) { $subscriptionAlertEnabledInd = 1; }
+
+		if ($subscriptionAlertEnabledInd_str) { 
+			$subscriptionAlertEnabledInd = 1; 
+		}
+
 		if ($resourceLicenseLink_str) {
 			my $licenseID = find_term($resourceLicenseLink_str, \%license);
-			if ($licenseID) { push @license_links, [ $titleText, $licenseID ]; }
+			if ($licenseID) { 
+				push @license_links, [ $titleText, $licenseID ]; 
+			}
 		}
+
 		if ($resourceLicenseStatus_str) {
 			my $licenseStatusID = find_term($resourceLicenseStatus_str, \%license_status);
-			if ($licenseStatusID) { push @license_statuses, [ $titleText, $licenseStatusID ]; }
+			if ($licenseStatusID) { 
+				push @license_statuses, [ $titleText, $licenseStatusID ]; 
+			}
 		}
+
 		if ($resourceAuthorizedSiteLink_str) {
 			my $authorizedSiteID = insert_AuthorizedSite($resourceAuthorizedSiteLink_str, $dbh_res);
 			push @authorized_sites, [ $titleText, $authorizedSiteID ];
 		}
+
 		if ($resourceAdministeringSiteLink_str) {
 			my $administeringSiteID = insert_AdministeringSite($resourceAdministeringSiteLink_str, $dbh_res);
 			push @administering_sites, [ $titleText, $administeringSiteID ];
 		}
+
 		my $authenticationType = find_term($authenticationTypeID_str, \%authenticationType);
 		my $accessMethodID = find_term($accessMethodID_str, \%accessMethod);
 		my $storageLocation = find_term($storageLocationID_str, \%storageLocation);
 		my $userLimit = find_term($userLimit_str, \%userLimit);
-		if (length($coverageText) > 1000) { $coverageText = substr($coverageText, 0, 999); }
-		if (length($authenticationUserName) > 200) { $authenticationUserName = substr($authenticationUserName, 0, 199); }
-		if (length($authenticationPassword) > 200) { $authenticationPassword = substr($authenticationPassword, 0, 199); }
+
+		if (length($coverageText) > 1000) { 
+			$coverageText = substr($coverageText, 0, 999); 
+		}
+
+		if (length($authenticationUserName) > 200) { 
+			$authenticationUserName = substr($authenticationUserName, 0, 199); 
+		}
+
+		if (length($authenticationPassword) > 200) { 
+			$authenticationPassword = substr($authenticationPassword, 0, 199); 
+		}
+
 		my $catalogingTypeID = find_term($catalogingTypeID_str, \%catalogingType);
 		my $catalogingStatusID = find_term($catalogingStatusID_str, \%catalogingStatus);
-		if (length($recordSetIdentifier) > 45) { $recordSetIdentifier = substr($recordSetIdentifier, 0, 44); }
-		if (length($bibSourceURL) > 2000) { $bibSourceURL = substr($bibSourceURL, 0, 1999); }
-		if (length($hasOclcHoldings) > 10) { $hasOclcHoldings = substr($hasOclcHoldings, 0, 9); }
-		if (length($numberRecordsLoaded) > 45) { $numberRecordsLoaded = substr($numberRecordsLoaded, 0, 44); }
-		if (length($numberRecordsAvailable) > 45) { $numberRecordsAvailable = substr($numberRecordsAvailable, 0, 44); }
+
+		if (length($recordSetIdentifier) > 45) { 
+			$recordSetIdentifier = substr($recordSetIdentifier, 0, 44); 
+		}
+
+		if (length($bibSourceURL) > 2000) { 
+			$bibSourceURL = substr($bibSourceURL, 0, 1999); 
+		}
+
+		if (length($hasOclcHoldings) > 10) { 
+			$hasOclcHoldings = substr($hasOclcHoldings, 0, 9); 
+		}
+
+		if (length($numberRecordsLoaded) > 45) { 
+			$numberRecordsLoaded = substr($numberRecordsLoaded, 0, 44); 
+		}
+
+		if (length($numberRecordsAvailable) > 45) { 
+			$numberRecordsAvailable = substr($numberRecordsAvailable, 0, 44); 
+		}
+
 		my $archiveDate = undef;
 		my $archiveLoginID = undef;
 		my $workflowRestartDate = undef;
@@ -486,13 +600,52 @@ sub main {
 		my $providerText = undef;
 	
 		# Insert the data.
-		$sth_1->execute( $resourceID, $createDate, $createLoginID, $updateDate, $updateLoginID, $archiveDate, $archiveLoginID, $workflowRestartDate, $workflowRestartLoginID, $titleText, $isbnOrISSN, $descriptionText, $statusID, $resourceType, $resourceFormatID, $orderNumber, $systemNumber, $subscriptionStartDate, $subscriptionEndDate, $subscriptionAlertEnabledInd, $userLimit, $resourceURL, $authenticationUserName, $authenticationPassword, $storageLocation, $registeredIPAddresses, $acquisitionType, $authenticationType, $accessMethodID, $providerText, $recordSetIdentifier, $hasOclcHoldings, $numberRecordsAvailable, $numberRecordsLoaded, $bibSourceURL, $catalogingTypeID, $catalogingStatusID, $coverageText, $resourceAltURL);
-	} # Everything ends after a while.
+		$sth_1->execute( 
+			$resourceID,
+			$createDate,
+			$createLoginID,
+			$updateDate,
+			$updateLoginID,
+			$archiveDate,
+			$archiveLoginID,
+			$workflowRestartDate,
+			$workflowRestartLoginID,
+			$titleText,
+			$isbnOrISSN,
+			$descriptionText,
+			$statusID,
+			$resourceType,
+			$resourceFormatID,
+			$orderNumber,
+			$systemNumber,
+			$subscriptionStartDate,
+			$subscriptionEndDate,
+			$subscriptionAlertEnabledInd,
+			$userLimit,
+			$resourceURL,
+			$authenticationUserName,
+			$authenticationPassword,
+			$storageLocation,
+			$registeredIPAddresses,
+			$acquisitionType,
+			$authenticationType,
+			$accessMethodID,
+			$providerText,
+			$recordSetIdentifier,
+			$hasOclcHoldings,
+			$numberRecordsAvailable,
+			$numberRecordsLoaded,
+			$bibSourceURL,
+			$catalogingTypeID,
+			$catalogingStatusID,
+			$coverageText,
+			$resourceAltURL,
+		);
+	} # End of the while loop.
 	
-	# Clean up after yourself!
-	close FH;
 	$dbh_res->commit;
 	
+	# Now that the records have been created, these can be called.
 	load_ResourcePayments(\@payments, $dbh_res);
 	load_Organizations(\@orgs, $dbh_res);
 	load_Parents(\@parents, $dbh_res);
@@ -507,4 +660,4 @@ sub main {
 	$dbh_res->disconnect;
 }
 
-main(); # Only line in main:: is main::main.
+main(); # This makes everything happen.
